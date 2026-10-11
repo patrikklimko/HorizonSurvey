@@ -65,7 +65,7 @@ Unusually for a student AR project, this one has an objective ground truth, and 
 | Week | Focus | Status |
 |---|---|---|
 | 1 | Prove the phone can measure an angle | Done |
-| 2 | Solar engine, unit-tested | |
+| 2 | Solar engine, unit-tested | Done |
 | 3 | Heading: compass baseline + sun-sighting calibration | |
 | 4 | Guided sweep and horizon capture | |
 | 5 | Automatic sky segmentation | |
