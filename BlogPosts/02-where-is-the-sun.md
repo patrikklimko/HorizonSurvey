@@ -101,6 +101,36 @@ A test with an exact expected value, derived from the site's latitude, that woul
 
 One more, because it's the whole premise of the product: the same 30-degree wall costs **9.1 per cent** due south and **0.0 per cent** due north. Direction is everything, and that is precisely what a satellite estimate cannot tell you.
 
+## The result
+
+Thirty assertions, thirty passes.
+
+```
+-- Declination
+  PASS  Jun solstice declination ~ +23.44   (got 23.438)
+  PASS  Dec solstice declination ~ -23.44   (got -23.437)
+-- Noon elevation at Horsens
+  PASS  Summer solstice noon ~ 57.6   (got 57.588)
+  PASS  Winter solstice noon ~ 10.7   (got 10.785)
+-- Equation of time
+    min -14.23 min on Feb 11
+    max  16.49 min on Nov 03
+-- Day length at Horsens
+  PASS  Summer solstice ~ 17h35m   (got 17.584)
+  PASS  Winter solstice ~ 6h59m   (got 6.977)
+-- Solar access integration
+  PASS  Access falls monotonically as the skyline rises
+  PASS  15 deg ring: December exactly 0%   (got 0.000)
+    highest December sun: 12.37 deg
+    30 deg wall, 60 deg wide: south 90.88%   north 100.00%
+
+=== 30 passed, 0 failed ===
+```
+
+The part that actually convinces me is not the pass count. It is that the C# output matches the independent Python port to three decimal places on every figure: 97.524 against 97.5238 for the ten-degree ring, 53.913 against 53.91 for December, 90.876 against 90.88 for the southern wall.
+
+Two implementations written separately, agreeing to a thousandth. That is much harder to achieve by coincidence than by both being correct.
+
 ## On not having a test framework
 
 The Unity Test Framework went out of this project in week one along with the feature set that was dragging in a package my work network couldn't fetch. Rather than block on that, the verification lives in an editor menu item — `Horizon Survey > Run Solar Self-Check` — that runs the same assertions and prints a pass/fail report.
