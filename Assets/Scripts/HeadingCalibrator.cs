@@ -70,6 +70,14 @@ public class HeadingCalibrator : MonoBehaviour
     /// <summary>Below this the sun is too low to aim at reliably, and refraction is largest.</summary>
     public const float MinimumSunElevationDeg = 5.0f;
 
+    /// <summary>
+    /// A new sun sighting further than this from the previous accepted one is not
+    /// trusted on its own. Found in the field on 15 Nov 2026: a chimney top that
+    /// happened to stand at the sun's elevation, 10 degrees to one side of it, passed
+    /// the elevation gate. Elevation cannot see a sideways mistake; a second sighting can.
+    /// </summary>
+    public const float SightingAgreementDeg = 2.0f;
+
     const float Missing = -999f;
 
     public HeadingReference Reference { get; private set; } = HeadingReference.None;
@@ -214,7 +222,10 @@ public class HeadingCalibrator : MonoBehaviour
         float observedAzimuthAr = CameraAngles.AzimuthAR(forward);
         float residual = observedElevation - (float)sun.ElevationDeg;
         float offset = CameraAngles.Mod360((float)sun.AzimuthDeg - observedAzimuthAr);
-        bool accepted = Mathf.Abs(residual) <= ElevationGateDeg;
+        bool elevationOk = Mathf.Abs(residual) <= ElevationGateDeg;
+        float change = HasSunReference ? CameraAngles.AngleDifference(offset, LastSunOffsetDeg) : float.NaN;
+        bool agrees = float.IsNaN(change) || Mathf.Abs(change) <= SightingAgreementDeg;
+        bool accepted = elevationOk && agrees;
 
         bool compassValid = location.CompassEnabled && location.CompassHeadingAccuracy >= 0f;
         var ev = new CalibrationEvent
@@ -239,7 +250,7 @@ public class HeadingCalibrator : MonoBehaviour
 
         // Elevation is independently reliable, so disagreement means a bad aim or a
         // wrong clock. Either way the azimuth from this sighting cannot be trusted.
-        if (!accepted)
+        if (!elevationOk)
         {
             Message =
                 $"sun: rejected, elevation off by {residual:+0.0;-0.0} deg " +
@@ -248,7 +259,15 @@ public class HeadingCalibrator : MonoBehaviour
             return false;
         }
 
-        float change = HasSunReference ? CameraAngles.AngleDifference(offset, LastSunOffsetDeg) : float.NaN;
+        if (!agrees)
+        {
+            // Keep the existing heading. If the EARLIER sighting was the bad one,
+            // Reset heading and sight twice more.
+            Message =
+                $"sun: rejected, {change:+0.0;-0.0} deg from the last sighting. " +
+                "Is the crosshair on the sun? Sight again, or Reset heading to start over.";
+            return false;
+        }
 
         LastElevationResidualDeg = residual;
         LastSunOffsetDeg = offset;
