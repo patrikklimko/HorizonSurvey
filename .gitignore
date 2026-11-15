@@ -108,3 +108,6 @@ InitTestScene*.unity*
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
 .DS_Store
+
+# Raw field recordings and screenshots - curated copies live in BlogPosts/images
+/Media/raw/

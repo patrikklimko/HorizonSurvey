@@ -30,6 +30,18 @@ public class SunPathOverlay : MonoBehaviour
 
     public bool Visible { get; set; } = true;
 
+    /// <summary>
+    /// Fade the sun paths while the user traces. In the first field test the bright
+    /// white path for today was the most visible line on screen, and it got traced
+    /// instead of the rooftops. While tracing, only the skyline should catch the eye.
+    /// </summary>
+    public bool Subdued
+    {
+        get => subdued;
+        set { if (subdued != value) { subdued = value; dirty = true; nextNowUpdate = 0f; } }
+    }
+    bool subdued;
+
     enum Exposure { Lit, Shaded, Unknown }
 
     struct SunPoint
@@ -330,7 +342,9 @@ public class SunPathOverlay : MonoBehaviour
             nowRing.SetPosition(i, Dir(az + radiusDeg * Mathf.Cos(t) / cosEl, el + radiusDeg * Mathf.Sin(t)));
         }
         nowRing.widthMultiplier = WidthMetres(0.35f);
-        nowRing.startColor = nowRing.endColor = NowColor;
+        Color ring = NowColor;
+        if (subdued) ring.a *= 0.25f;
+        nowRing.startColor = nowRing.endColor = ring;
     }
 
     Vector3 Dir(float trueAzimuthDeg, float elevationDeg) =>
@@ -363,6 +377,7 @@ public class SunPathOverlay : MonoBehaviour
                 width = dimWidthDeg;
                 break;
         }
+        if (subdued) c.a *= 0.25f;
         lr.startColor = lr.endColor = c;
         lr.widthMultiplier = WidthMetres(width);
     }

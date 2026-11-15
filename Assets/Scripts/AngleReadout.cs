@@ -105,6 +105,8 @@ public class AngleReadout : MonoBehaviour
         if (capture.IsTracing)
             capture.TryRecord(arCamera);
 
+        overlay.Subdued = capture.IsTracing;
+
         if (Time.unscaledTime >= nextPreviewAt)
         {
             previewProfile = capture.BuildProfile(calibrator);
