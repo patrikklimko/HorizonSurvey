@@ -1,82 +1,134 @@
 # Horizon Survey
 
-An iOS augmented reality app that measures how much sunlight a specific spot actually receives across the year — so you can tell whether it is worth putting solar panels there.
+**An iPhone AR app that measures how much sunlight one exact spot gets across a whole year, so you can tell whether a solar panel is worth putting there.**
 
-You stand where the panel would go, sweep the phone across the sky, and the app builds a profile of everything blocking it: buildings, trees, chimneys. It then overlays the sun's real path for every day of the year and reports how much solar energy is lost to shading, month by month.
+You stand where the panel would go, sight the sun to find true north, and trace the skyline with the crosshair. The app draws the sun's real path for every season onto the live camera view, and reports how much of the year's sunlight the spot keeps, month by month.
 
-The professional instrument that does this — a Solmetric SunEye 210 — costs around $2,195. Most homeowners therefore guess, and sometimes guess badly.
+The professional instrument for this, a Solmetric SunEye 210, costs about $2,195. This app uses the phone you already have.
 
-**XRD course project, VIA University College, autumn 2026.** Individual project.
+<img src="Media/demo-tracing.gif" width="260" alt="Tracing the skyline: the cyan line follows the roof, with the sun's paths drawn on the sky">
+
+*Tracing the skyline from a window in Horsens. Cyan is the trace. White is today's sun path, blue is December's, with a tick at every hour.*
+
+**XRD course project, VIA University College Horsens, autumn 2026.** Individual project by Patrik Klimko.
 
 ---
 
-## Why AR
+## Reading guide
 
-The measurement is the angular position of real physical objects relative to a real vantage point. You have to stand where the panel will go, and the answer changes if you move three metres to the left. The phone's camera pose *is* the instrument.
+1. This README gives the overview, the results and a map of the code.
+2. The [blog posts](#blog) tell the story week by week, including what went wrong.
+3. The code that matters is about 2,600 lines in [`Assets/Scripts/`](Assets/Scripts/). The [code map](#code-map) below says what each file does.
 
-A 2D app cannot do this.
+## Why it has to be AR
+
+The quantity being measured is **the angular position of real objects as seen from one exact point**. Move three metres and the answer changes. The phone's pose in space, tracked by ARKit, *is* the measuring instrument. A 2D app can't do this, because it can't know where the camera is pointing.
+
+The AR view then shows the result where it happens: the December sun path passing behind the neighbour's roof, on the actual neighbour's roof.
 
 ## How it works
 
-1. **Establish true north.** Anchor the AR session's world frame to a geographic reference. This is the accuracy bottleneck — every bearing downstream inherits its error.
-2. **Sweep the sky.** The user pans the phone across the sky. Each frame carries a camera pose and camera intrinsics, so any pixel maps to a known azimuth and elevation.
-3. **Segment sky from obstruction.** Per frame, separate bright sky from dark obstruction and find the boundary for each image column. Accumulate into a horizon profile: 360 bins of one degree, each holding the highest obstruction seen at that bearing.
-4. **Compute the sun's track.** From latitude, longitude and date, calculate solar azimuth and elevation at five-minute intervals for all 365 days.
-5. **Integrate.** For each sun sample, compare its elevation against the measured horizon at that azimuth. Weight by clear-sky irradiance and sum. Unshaded over total is the solar access figure.
+```mermaid
+flowchart LR
+    A["1 Find north<br/>sight the sun<br/>±0.3°"] --> B["2 Trace the skyline<br/>crosshair on rooftops<br/>360 one-degree bins"]
+    B --> C["3 The sun's year<br/>position every 5 min<br/>for 365 days"]
+    C --> D["4 Compare<br/>sun above or behind<br/>the skyline?"]
+    D --> E["Answer<br/>% of clear-sky sunlight<br/>per month"]
+```
 
-## Architecture
+1. **Find north.** ARKit knows which way is down, but not which way is north. Pointing the crosshair at the sun gives a heading accurate to a fraction of a degree, because the sun's position is known exactly for a given time and place. The compass is a fallback, and a poor one (see results).
+2. **Trace the skyline.** Hold the trace button and follow the top edge of every roof, chimney and tree with the crosshair. Each frame becomes a bearing and elevation sample; each one-degree bin takes the median.
+3. **Compute the sun's year.** NOAA solar position equations, every 5 minutes, all 365 days, weighted by clear-sky irradiance.
+4. **Compare.** At each step, the sun is either above the measured skyline at that bearing, or behind it. Received over available is the solar access figure.
 
-Three subsystems, deliberately separated — two of them never touch AR at all, which means they can be developed and unit-tested on a laptop without deploying to a device.
+## Results so far
 
-| Subsystem | Depends on AR? | What it does |
+| What was tested | How | Result |
 |---|---|---|
-| Solar engine | No | Pure C#. Solar position from lat/lon/UTC; year integration against a horizon profile. |
-| Horizon model | No | Plain data: 360 floats of obstruction elevation, plus a coverage array. |
-| AR capture | Yes | Turns camera frames plus pose into entries in the horizon model. |
+| Can the phone measure an angle? | Elevation to marks at known heights, 1 to 8 m away | ARKit reads a constant 0.31° low; after correction, worst error **0.04°** |
+| Is the sun maths right? | 39 checks against almanac values and first principles | **39 / 39 pass** |
+| How good is the sun sighting? | 17 repeated sightings in 6 sessions | Spread **±0.3°** |
+| How good is the compass? | Compass read at the moment of each sun sighting | Error **−16° to +46°**, while iOS claimed ±11° |
+| Is the AR overlay in the right place? | Hour ticks and path heights in screenshots against the astronomy | Within the accuracy of reading a screenshot, about 0.5° |
+| Same spot, five surveys: same answer? | *Outdoor surveys, Monday 16 Nov* | *pending* |
 
-### The asymmetry that shapes everything
+Full detail is in the blog posts. Raw calibration data is in [`Data/`](Data/).
 
-The two measured angles are not equally trustworthy.
+## Using the app
 
-**Elevation is nearly free.** AR Foundation's world frame is gravity-aligned, so "up" is accurate to a fraction of a degree, indoors or out, always.
+1. **Stand in the open**, at the spot you want to measure, with a view from north-east through south to north-west. From inside a window, most of the sky is hidden by the wall, and the app will refuse to give a result.
+2. **Sight the sun twice.** Put the crosshair on the centre of the glare and tap *Sight sun*. A second sighting must agree with the first within 2°. **Never look at the sun directly; watch the screen.** A magenta ring then marks where the sun should be. It should sit on the real sun.
+3. **Trace the skyline.** Hold *Trace* and turn slowly, keeping the crosshair on the top edge of whatever blocks the sky. Two passes. Stay on the spot: the app warns you if you move more than a metre.
+4. **Save.** The app needs at least 80% of the sun's yearly arc traced (43° to 317° at Horsens). It then shows the result and saves it to `Documents/surveys` on the phone (Files app → On My iPhone → HorizonSurvey).
 
-**Azimuth is the whole problem.** Nothing in the AR frame knows where north is, so it has to be established by calibration, and every bearing inherits that error.
+## Code map
 
-So: trust elevation, calibrate azimuth, and report azimuth uncertainty in the results.
+The architecture follows one observation from week one: **elevation is free, azimuth is the whole problem.** ARKit's frame is gravity-aligned but has an arbitrary yaw. So everything is stored in the AR frame, and true bearings are produced only at the end, through one calibrated offset.
 
-## Stack
+**Solar engine:** pure .NET, compiled with `noEngineReferences`, so it can't touch Unity. It's tested without a device.
 
-- Unity 6.6 (6000.6.2f1), Universal Render Pipeline
-- AR Foundation 6.6.2 + Apple ARKit XR Plugin 6.6.2
-- C#, iOS 16+, built on macOS via Xcode
-- Target device: iPhone 15 Pro (LiDAR is **not** used — the sky has no depth — so this runs on much older iPhones too)
+| File | Job |
+|---|---|
+| [`Solar/SolarEngine.cs`](Assets/Scripts/Solar/SolarEngine.cs) | Sun azimuth and elevation from latitude, longitude and UTC (NOAA equations, with refraction) |
+| [`Solar/HorizonProfile.cs`](Assets/Scripts/Solar/HorizonProfile.cs) | 360 one-degree bins of obstruction elevation; coverage; gap filling that stays flagged as inferred |
+| [`Solar/SolarAccessCalculator.cs`](Assets/Scripts/Solar/SolarAccessCalculator.cs) | A year of sun against a horizon, clear-sky weighted; the sun's yearly bearing arc |
 
-## Validation
+**AR app:**
 
-Unusually for a student AR project, this one has an objective ground truth, and obtaining it costs nothing:
+| File | Job |
+|---|---|
+| [`CameraAngles.cs`](Assets/Scripts/CameraAngles.cs) | Camera direction to elevation and bearing, and back; the measured 0.31° correction |
+| [`HeadingCalibrator.cs`](Assets/Scripts/HeadingCalibrator.cs) | Sun sighting and compass calibration, with two gates: elevation must match, and consecutive sightings must agree. Logs every attempt to `calibrations.csv` |
+| [`SkylineCapture.cs`](Assets/Scripts/SkylineCapture.cs) | Records the trace in the AR frame; median per bin; movement warning |
+| [`SurveyRecorder.cs`](Assets/Scripts/SurveyRecorder.cs) | Coverage gate, computes the result, writes JSON and a horizon CSV |
+| [`SunPathOverlay.cs`](Assets/Scripts/SunPathOverlay.cs) | Sun paths, hour ticks, sun ring and traced skyline, drawn on a sky dome in the camera view |
+| [`ResultsView.cs`](Assets/Scripts/ResultsView.cs) | Results screen: headline %, sun chart, monthly bars |
+| [`AngleReadout.cs`](Assets/Scripts/AngleReadout.cs) | The HUD and touch handling, which wires the rest together |
+| [`LocationProvider.cs`](Assets/Scripts/LocationProvider.cs) | GPS and compass |
 
-- **Trigonometric check.** For an object of known height at known distance, the elevation angle to its top is `atan(height / distance)`. Compare against what the app reports, across several bearings, to get an error distribution.
-- **Shadow check.** Note the time a real shadow reaches a marked point. The model predicts it. Agreement is unambiguous.
-- **Independent comparison.** PVGIS, the European Commission's PV tool, accepts a user-supplied horizon profile via its API.
-- **Repeatability.** Survey the same spot five times and report the spread.
+**Verification:** *Horizon Survey → Run Solar Self-Check* in the Unity menu runs [`Editor/SolarSelfCheck.cs`](Assets/Editor/SolarSelfCheck.cs) (39 checks). NUnit versions of the same tests are in [`Assets/Tests~`](Assets/Tests~/), not compiled by default; see the README there.
+
+## Building
+
+- Unity **6000.6.2f1**, URP, AR Foundation and Apple ARKit XR Plugin **6.6.2**, Input System 1.20 (new input only)
+- iOS 16+, an iPhone with ARKit. LiDAR is not needed: the sky has no depth.
+- File → Build Profiles → iOS → Build, then open `Unity-iPhone.xcodeproj` in Xcode, set your signing team and run. A post-build step enables file sharing, so surveys can be copied off the phone.
+
+## Limitations
+
+- **Flat panel, clear sky.** The figure is the fraction of clear-sky sunlight on a horizontal surface. Real panels are tilted, and real skies are cloudy. Converting to kWh is a job for a tool like PVGIS, which accepts this app's horizon CSV.
+- **The sun has to be out to calibrate well.** On a cloudy day, the compass fallback works, but the field data shows how far it can be off. The app reports which reference was used.
+- **One skyline per bearing.** A balcony with an overhang above it, or a window, blocks sky from above as well as below. That can't be expressed as a single horizon line, so those cases are out of scope.
+- **Tracing is manual.** Automatic sky detection was planned and cut. Low sun glare and bare winter trees make it unreliable exactly where accuracy matters. See post 4.
+
+## Blog
+
+| # | Post |
+|---|---|
+| 1 | [Measuring the sky with a phone](BlogPosts/01-measuring-the-sky.md): is a phone an instrument? |
+| 2 | [Where is the sun, and how do I know I'm right?](BlogPosts/02-where-is-the-sun.md): the solar engine and its checks |
+| 3 | [Finding north](BlogPosts/03-finding-north.md): compass against sun sighting |
+| 4 | [Tracing the skyline](BlogPosts/04-tracing-the-skyline.md): manual tracing, and three attempts to get it right |
+| 5 | [The sun on the real sky](BlogPosts/05-the-sun-on-the-real-sky.md): the AR overlay and the results screen |
+| 6 | Validation: *coming* |
+| 7 | Reflection: *coming* |
 
 ## Progress
 
 | Week | Focus | Status |
 |---|---|---|
 | 1 | Prove the phone can measure an angle | Done |
-| 2 | Solar engine, unit-tested | Done |
-| 3 | Heading: compass baseline + sun-sighting calibration | |
-| 4 | Guided sweep and horizon capture | |
-| 5 | Automatic sky segmentation | |
-| 6 | Sun path overlay and results screen | |
-| 7 | Validation and write-up | |
-
-Weekly write-ups are in [`BlogPosts/`](BlogPosts/).
+| 2 | Solar engine, verified | Done |
+| 3 | Heading: compass baseline and sun-sighting calibration | Done |
+| 4 | Skyline capture | Done, by manual tracing instead of automatic segmentation |
+| 5 | Sun path overlay and results screen | Done |
+| 6 | Validation | Field surveys 16 Nov |
+| 7 | Write-up | In progress |
 
 ## References
 
-- Solmetric SunEye 210 — the instrument this replaces
-- PVGIS non-interactive API, European Commission Joint Research Centre
-- NOAA solar position equations
-- NREL Solar Position Algorithm (Reda & Andreas)
+- NOAA Global Monitoring Laboratory, solar position calculator equations
+- Kasten, F. and Young, A. T. (1989). Revised optical air mass tables and approximation formula. *Applied Optics* 28(22)
+- Reda, I. and Andreas, A. (2004). Solar Position Algorithm for Solar Radiation Applications. NREL
+- European Commission JRC, PVGIS (Photovoltaic Geographical Information System)
+- Solmetric SunEye 210, the instrument this replaces
