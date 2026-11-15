@@ -118,6 +118,66 @@ namespace HorizonSurvey.Solar
             return _elevationDeg[i0] * (1.0 - frac) + _elevationDeg[i1] * frac;
         }
 
+        /// <summary>
+        /// Fraction of bins with at least one observation inside a clockwise arc,
+        /// inclusive at both ends. Used to check the sweep covered every bearing the
+        /// sun can actually occupy - obstructions outside that arc can never shade.
+        /// </summary>
+        public double CoverageFractionOfArc(double fromAzimuthDeg, double toAzimuthDeg)
+        {
+            int from = BinOf(fromAzimuthDeg);
+            int to = BinOf(toAzimuthDeg);
+            int total = 0, covered = 0, i = from;
+            while (true)
+            {
+                total++;
+                if (_sampleCount[i] > 0) covered++;
+                if (i == to) break;
+                i = (i + 1) % BinCount;
+            }
+            return covered / (double)total;
+        }
+
+        /// <summary>
+        /// A copy in which every untraced bin is filled by linear interpolation around
+        /// the circle between the nearest traced bins on either side.
+        ///
+        /// Filled bins keep a sample count of zero, so coverage figures still report
+        /// honestly what was measured versus what was inferred. An empty profile stays
+        /// empty, which reads as an open horizon.
+        /// </summary>
+        public HorizonProfile WithGapsInterpolated()
+        {
+            var result = new HorizonProfile();
+
+            int coveredCount = 0;
+            for (int i = 0; i < BinCount; i++)
+                if (_sampleCount[i] > 0) coveredCount++;
+            if (coveredCount == 0) return result;
+
+            for (int i = 0; i < BinCount; i++)
+            {
+                if (_sampleCount[i] > 0)
+                {
+                    result._elevationDeg[i] = _elevationDeg[i];
+                    result._sampleCount[i] = _sampleCount[i];
+                    continue;
+                }
+
+                int back = 1;
+                while (_sampleCount[(i - back + BinCount) % BinCount] == 0) back++;
+                int ahead = 1;
+                while (_sampleCount[(i + ahead) % BinCount] == 0) ahead++;
+
+                double before = _elevationDeg[(i - back + BinCount) % BinCount];
+                double after = _elevationDeg[(i + ahead) % BinCount];
+                double t = back / (double)(back + ahead);
+                result._elevationDeg[i] = before + (after - before) * t;
+            }
+
+            return result;
+        }
+
         /// <summary>Highest obstruction anywhere in the profile.</summary>
         public double MaxElevationDeg
         {

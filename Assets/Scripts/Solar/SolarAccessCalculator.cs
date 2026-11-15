@@ -72,6 +72,31 @@ namespace HorizonSurvey.Solar
         }
 
         /// <summary>
+        /// The widest span of bearings the sun occupies above the horizon during the
+        /// year at this site. That is the June solstice, sunrise to sunset bearing.
+        /// Obstructions outside this arc can never shade anything, so it defines which
+        /// part of the sky the sweep must cover. At Horsens it is about 44..316 deg.
+        ///
+        /// Assumes the arc does not cross north, which holds below the Arctic Circle.
+        /// </summary>
+        public static (double FromAzimuthDeg, double ToAzimuthDeg) SunAzimuthArc(
+            double latitudeDeg, double longitudeDeg, int year)
+        {
+            double min = 360.0, max = 0.0;
+            var day = new DateTime(year, 6, 21, 0, 0, 0, DateTimeKind.Utc);
+
+            for (int minute = 0; minute < 1440; minute += 2)
+            {
+                SolarPosition sun = SolarEngine.Position(latitudeDeg, longitudeDeg, day.AddMinutes(minute));
+                if (sun.ElevationDeg <= 0.0) continue;
+                if (sun.AzimuthDeg < min) min = sun.AzimuthDeg;
+                if (sun.AzimuthDeg > max) max = sun.AzimuthDeg;
+            }
+
+            return (Math.Floor(min), Math.Ceiling(max));
+        }
+
+        /// <summary>
         /// Compute solar access for a location, year and measured horizon.
         /// stepMinutes trades accuracy for speed; 5 is plenty and runs in well
         /// under a second.

@@ -40,6 +40,8 @@ public static class SolarSelfCheck
         CheckEquationOfTime();
         CheckDayLengths();
         CheckSolarAccess();
+        CheckHorizonTools();
+        CheckOverlayGeometry();
 
         _log.AppendLine();
         _log.AppendLine($"=== {_passed} passed, {_failed} failed ===");
@@ -208,6 +210,60 @@ public static class SolarSelfCheck
         Near("30 deg wall due north -> ~100%", northAccess, 100.0, 0.5);
         True("South obstruction costs far more than north",
             (100.0 - southAccess) > 10.0 * (100.0 - northAccess + 0.01));
+    }
+
+    static void CheckHorizonTools()
+    {
+        Section("Horizon gap filling and coverage");
+
+        var p = new HorizonProfile();
+        p.SetBin(10, 10.0);
+        p.SetBin(20, 20.0);
+        var filled = p.WithGapsInterpolated();
+        Near("Gap filled linearly between traced bins", filled.RawBin(15), 15.0, 1e-9);
+        True("Filled bins are still reported as not traced", !filled.IsCovered(15) && filled.IsCovered(10));
+
+        var w = new HorizonProfile();
+        w.SetBin(350, 10.0);
+        w.SetBin(10, 30.0);
+        Near("Gap filling wraps across north", w.WithGapsInterpolated().RawBin(0), 20.0, 1e-9);
+
+        var c = new HorizonProfile();
+        c.SetArc(100, 199, 5.0);
+        Near("Arc coverage: fully traced arc", c.CoverageFractionOfArc(100, 199), 1.0, 1e-9);
+        Near("Arc coverage: half of a wider arc", c.CoverageFractionOfArc(100, 299), 0.5, 1e-9);
+
+        var arc = SolarAccessCalculator.SunAzimuthArc(Lat, Lon, Year);
+        _log.AppendLine($"    sun's yearly arc at Horsens: {arc.FromAzimuthDeg:F0} .. {arc.ToAzimuthDeg:F0} deg");
+        Between("Sun arc starts in the north-east (40..48)", arc.FromAzimuthDeg, 40.0, 48.0);
+        Between("Sun arc ends in the north-west (312..320)", arc.ToAzimuthDeg, 312.0, 320.0);
+    }
+
+    static void CheckOverlayGeometry()
+    {
+        Section("AR overlay placement");
+
+        // A point drawn at (azimuth, elevation) must read back as exactly that
+        // azimuth and elevation when the crosshair is put on it - including the
+        // measured +0.31 deg elevation correction, which must cancel out.
+        double worst = 0.0;
+        foreach (float az in new[] { -170f, -90f, 0f, 44f, 148.5f, 180f, 316f })
+        foreach (float el in new[] { 0.5f, 10.7f, 30f, 57.6f, 85f })
+        {
+            Vector3 d = CameraAngles.DirectionAR(az, el);
+            double dAz = Math.Abs(CameraAngles.AngleDifference(CameraAngles.AzimuthAR(d), az));
+            double dEl = Math.Abs(CameraAngles.Elevation(d) - el);
+            worst = Math.Max(worst, Math.Max(dAz, dEl));
+        }
+        Near("Overlay direction reads back as the same angles (worst error, deg)", worst, 0.0, 1e-3);
+
+        // The dome is yawed by minus the heading offset. A point at true bearing A
+        // must then sit at AR bearing A - offset, which is what calibration inverts.
+        const float offset = 110.6f;
+        Vector3 local = CameraAngles.DirectionAR(148.5f, 10.7f);
+        Vector3 world = Quaternion.Euler(0f, -offset, 0f) * local;
+        float trueAz = CameraAngles.Mod360(CameraAngles.AzimuthAR(world) + offset);
+        Near("Dome yaw maps true bearing into the AR frame", trueAz, 148.5, 1e-3);
     }
 
     static double MaxElevationInDecember()

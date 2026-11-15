@@ -26,7 +26,7 @@ Three files:
 
 This is the part I'd have got wrong if I'd written it from memory.
 
-Clock time and solar time disagree for two separate reasons. One is boring: your longitude within your time zone. Horsens sits at 9.85 degrees east, so the sun crosses the meridian about 39 minutes earlier than it does at the zone's nominal centre.
+Clock time and solar time disagree for two separate reasons. One is boring: your longitude within your time zone. Central European Time is set for 15 degrees east; Horsens sits at 9.85, about 5 degrees further west, and every degree costs four minutes. So the sun crosses the meridian here about 21 minutes later than it does at the zone's nominal centre.
 
 The other is not boring. Earth's orbit is slightly elliptical and its axis is tilted, so the sun runs ahead of and behind mean time over the year, by up to a quarter of an hour either way. This is the **equation of time**, and my implementation reproduces the classic envelope:
 

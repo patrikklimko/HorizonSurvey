@@ -34,6 +34,20 @@ public static class CameraAngles
     public static float AzimuthAR(Vector3 forward) =>
         Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
 
+    /// <summary>
+    /// Inverse of Elevation and AzimuthAR: the unit vector the crosshair would point
+    /// along to read these two angles. This is how overlays get placed in the sky.
+    /// The elevation offset is removed again, so an overlay drawn at the sun's true
+    /// elevation lands exactly where the crosshair would read that elevation.
+    /// </summary>
+    public static Vector3 DirectionAR(float azimuthArDeg, float elevationDeg)
+    {
+        float el = (elevationDeg - ElevationOffsetDeg) * Mathf.Deg2Rad;
+        float az = azimuthArDeg * Mathf.Deg2Rad;
+        float c = Mathf.Cos(el);
+        return new Vector3(Mathf.Sin(az) * c, Mathf.Sin(el), Mathf.Cos(az) * c);
+    }
+
     public static float Mod360(float degrees) => (degrees % 360f + 360f) % 360f;
 
     /// <summary>Smallest signed difference a - b, in -180..180.</summary>
