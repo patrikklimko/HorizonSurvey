@@ -325,7 +325,7 @@ public class AngleReadout : MonoBehaviour
             GUI.Label(new Rect(r.x + r.width * k / 4f + 4f, r.y, labelH * 2f, labelH), labels[k], smallStyle);
 
         if (!calibrator.IsCalibrated)
-            GUI.Label(new Rect(r.x + r.width * 0.3f, r.y, r.width, labelH), "session frame - calibrate heading", smallStyle);
+            GUI.Label(new Rect(r.x + r.width * 0.2f, r.y + (r.height - labelH) * 0.5f, r.width, labelH), "not calibrated - sight the sun", smallStyle);
     }
 
     string FormatCompass()

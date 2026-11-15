@@ -46,7 +46,8 @@ public class SunPathOverlay : MonoBehaviour
     }
 
     static readonly Color SkylineColor = new Color(0.25f, 0.9f, 1f, 0.95f);
-    static readonly Color NowColor = new Color(1f, 1f, 1f, 0.95f);
+    // Saturated magenta: a white ring vanished into the sun's glare in the first field test.
+    static readonly Color NowColor = new Color(1f, 0.2f, 0.75f, 1f);
 
     Camera cam;
     HeadingCalibrator calibrator;
@@ -314,10 +315,11 @@ public class SunPathOverlay : MonoBehaviour
         nowRing.gameObject.SetActive(up);
         if (!up) return;
 
-        // A circle about five sun-diameters across, centred where the sun should be.
+        // A circle about eight sun-diameters across, centred where the sun should be.
         // If the heading calibration is right, the real sun sits in the middle of it.
-        const int segments = 32;
-        const float radiusDeg = 1.3f;
+        // Big enough to stay visible outside the camera's glare around the sun.
+        const int segments = 40;
+        const float radiusDeg = 2.0f;
         float az = (float)sun.AzimuthDeg, el = (float)sun.ElevationDeg;
         float cosEl = Mathf.Max(0.2f, Mathf.Cos(el * Mathf.Deg2Rad));
 
@@ -327,7 +329,7 @@ public class SunPathOverlay : MonoBehaviour
             float t = i * Mathf.PI * 2f / segments;
             nowRing.SetPosition(i, Dir(az + radiusDeg * Mathf.Cos(t) / cosEl, el + radiusDeg * Mathf.Sin(t)));
         }
-        nowRing.widthMultiplier = WidthMetres(0.18f);
+        nowRing.widthMultiplier = WidthMetres(0.35f);
         nowRing.startColor = nowRing.endColor = NowColor;
     }
 

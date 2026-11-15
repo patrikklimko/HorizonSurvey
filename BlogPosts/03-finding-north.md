@@ -63,8 +63,21 @@ One more thing showed up when I compared the live compass reading against the su
 
 That's the real argument against the compass. A constant offset could be calibrated out once. An error that changes with direction and position can't.
 
+## The hole in my lie detector
+
+Twenty minutes later I found the flaw in my own safety check, by accident.
+
+I was trying to measure landmarks and kept pressing "Sight sun" while the crosshair sat on a chimney instead of the sun. Three of those attempts were rejected, as they should be. Two were accepted, and they moved the heading by 10 and 7.5 degrees.
+
+The reason is obvious once you see it. The sun was 12.2 degrees up. The chimney tops I was aiming at were also about 12 degrees up, just ten degrees to one side. The elevation check compares elevations, so it can't see a sideways mistake. It caught the bad aims that happened to be too high or too low, and missed the ones that happened to be level with the sun.
+
+The fix uses the one thing a single sighting can't provide: a second sighting. A new sun sighting that disagrees with the previous accepted one by more than 2 degrees is now rejected, and the screen asks whether the crosshair is really on the sun. If the *first* sighting was the bad one, Reset heading starts over. Two sightings agreeing within 2 degrees by chance, while both aimed at the wrong thing, is far less likely than one.
+
+After a reset, the next two sightings agreed to 0.5 degrees.
+
 ## What the app does now
 
+- **Two sightings must agree** within 2 degrees, or the second is rejected.
 - **Sun sighting is the primary reference**, reported as ±0.5°. Compass is the fallback for cloudy days, reported as ±5°. Today's data says even that is optimistic near steel, so the results screen tells the user to sight the sun if they used the compass.
 - **Recalibrating costs nothing.** Skyline samples are stored in the AR session's own frame, not as compass bearings. If the sun comes out halfway through a survey, one sighting re-projects everything already traced.
 - **Every calibration is logged**, accepted or rejected, to a CSV file on the phone, together with the compass reading at that moment. Each sun sighting therefore measures the compass error for free. This week's numbers came from screenshots; next time they come from a file.
