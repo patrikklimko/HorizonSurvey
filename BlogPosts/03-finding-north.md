@@ -116,6 +116,8 @@ This is one building and one day: about 30 calibrations. It's enough to see that
 
 The open-air surveys in the validation post will add more sightings away from the building, and I'll report the compass error there too. If it's much smaller in the open, that's worth knowing. It would mean the compass is fine in a garden and bad on a balcony, which is exactly where people put small solar panels.
 
+*Update after the outdoor surveys:* it is. In the open, 30 sightings put the compass within −11 to +4 degrees. At the window the same morning it was +47. See [post 6](06-validation.md).
+
 ## Next
 
 Tracing the skyline, and the decision to do it by hand instead of with the automatic sky detection I planned in week one.

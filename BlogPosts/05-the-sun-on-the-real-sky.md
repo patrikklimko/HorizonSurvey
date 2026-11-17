@@ -68,7 +68,9 @@ Underneath, it states how the heading was found and how much of the arc was trac
 
 The screen is drawn entirely from the saved survey file, not from the live trace. Any saved survey can be shown again later, and what's on screen is guaranteed to be what's in the file.
 
-<!-- TODO (after Monday's outdoor surveys): add images/05-results-screen.jpg here -->
+<img src="images/05-results-screen.jpg" width="320" alt="Results screen: 94.4 %, the sun chart over the traced skyline, and twelve monthly bars">
+
+*The results screen after an outdoor survey on 17 November. Hatched areas at the ends were filled in, not traced. The winter months lose sun to the rooftops in the south.*
 
 ## What it doesn't do
 
@@ -76,4 +78,4 @@ The percentage is for a **flat** panel under a **clear sky**. Real panels are ti
 
 ## Next
 
-Validation: five surveys of the same spot, the spread between them, the compass data from every calibration, and how all of it compares with independent sources.
+[Validation](06-validation.md): repeat surveys of the same spot, the spread between them, the compass data from every calibration, and what a wrong north does to the answer.

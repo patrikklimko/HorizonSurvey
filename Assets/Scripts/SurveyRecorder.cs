@@ -34,6 +34,13 @@ public class SurveyRecord
     public float[] horizonDeg;     // 360 bins, gaps interpolated
     public bool[] binTraced;       // 360 bins, true where measured rather than inferred
 
+    /// <summary>
+    /// True when less than the minimum share of the sun's arc was traced and the user
+    /// chose to keep the skyline anyway. No yearly figure is computed for these: the
+    /// untraced sky could hide anything. They are kept for repeatability comparison.
+    /// </summary>
+    public bool partial;
+
     public float annualAccessPct;  // -1 when not computed
     public float[] monthlyAccessPct;
 
@@ -54,6 +61,15 @@ public class SurveyRecorder : MonoBehaviour
 {
     /// <summary>Below this, refuse to report a result. The missing sky could hide anything.</summary>
     public const float MinimumSunArcCoverage = 0.80f;
+
+    /// <summary>A partial survey still has to contain a meaningful stretch of skyline.</summary>
+    public const float MinimumPartialArcCoverage = 0.15f;
+
+    /// <summary>
+    /// Set when the last save was refused only for low coverage, so the HUD can offer
+    /// "tap again to keep it as a partial survey".
+    /// </summary>
+    public bool CanSaveAsPartial { get; private set; }
 
     public SurveyRecord LastRecord { get; private set; }
     public string LastPath { get; private set; }
@@ -80,8 +96,11 @@ public class SurveyRecorder : MonoBehaviour
     public bool ComputeAndSave(
         SkylineCapture capture,
         HeadingCalibrator calibrator,
-        LocationProvider location)
+        LocationProvider location,
+        bool allowPartial = false)
     {
+        CanSaveAsPartial = false;
+
         if (capture.Samples.Count == 0)
         {
             Message = "nothing traced yet";
@@ -102,17 +121,25 @@ public class SurveyRecorder : MonoBehaviour
         var arc = SunArc(location);
         double arcCoverage = measured.CoverageFractionOfArc(arc.start, arc.end);
 
-        if (arcCoverage < MinimumSunArcCoverage)
+        bool partial = arcCoverage < MinimumSunArcCoverage;
+        if (partial && arcCoverage < MinimumPartialArcCoverage)
         {
-            Message = $"only {arcCoverage:P0} of the sun's arc ({arc.start:F0}-{arc.end:F0} deg) traced - " +
-                      $"need {MinimumSunArcCoverage:P0}";
+            Message = $"only {arcCoverage:P0} of the sun's arc traced - too little to save";
+            return false;
+        }
+        if (partial && !allowPartial)
+        {
+            CanSaveAsPartial = true;
+            Message = $"only {arcCoverage:P0} of the sun's arc traced (need {MinimumSunArcCoverage:P0}). " +
+                      "Tap Save again to keep it as a PARTIAL survey, with no yearly figure";
             return false;
         }
 
         HorizonProfile filled = measured.WithGapsInterpolated();
         DateTime now = DateTime.UtcNow;
-        SolarAccessResult result = SolarAccessCalculator.Compute(
-            location.Latitude, location.Longitude, now.Year, filled);
+        SolarAccessResult? result = partial
+            ? (SolarAccessResult?)null
+            : SolarAccessCalculator.Compute(location.Latitude, location.Longitude, now.Year, filled);
 
         var record = new SurveyRecord
         {
@@ -143,7 +170,8 @@ public class SurveyRecorder : MonoBehaviour
             horizonDeg = new float[HorizonProfile.BinCount],
             binTraced = new bool[HorizonProfile.BinCount],
 
-            annualAccessPct = (float)result.AnnualPercent,
+            partial = partial,
+            annualAccessPct = result.HasValue ? (float)result.Value.AnnualPercent : -1f,
             monthlyAccessPct = new float[12],
 
             samples = new SkylineCapture.Sample[capture.Samples.Count],
@@ -156,7 +184,7 @@ public class SurveyRecorder : MonoBehaviour
             record.binTraced[i] = measured.IsCovered(i);
         }
         for (int m = 0; m < 12; m++)
-            record.monthlyAccessPct[m] = (float)result.MonthlyPercent[m];
+            record.monthlyAccessPct[m] = result.HasValue ? (float)result.Value.MonthlyPercent[m] : -1f;
         for (int i = 0; i < capture.Samples.Count; i++)
             record.samples[i] = capture.Samples[i];
         for (int i = 0; i < calibrator.Events.Count; i++)
@@ -169,7 +197,9 @@ public class SurveyRecorder : MonoBehaviour
 
         LastRecord = record;
         LastPath = basePath + ".json";
-        Message = $"saved survey-{record.id}  annual {record.annualAccessPct:F1}%";
+        Message = partial
+            ? $"saved PARTIAL survey-{record.id} ({arcCoverage:P0} of arc)"
+            : $"saved survey-{record.id}  annual {record.annualAccessPct:F1}%";
         Debug.Log($"[HorizonSurvey] {Message}\n{LastPath}");
         return true;
     }

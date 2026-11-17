@@ -6,9 +6,9 @@ You stand where the panel would go, sight the sun to find true north, and trace 
 
 The professional instrument for this, a Solmetric SunEye 210, costs about $2,195. This app uses the phone you already have.
 
-<img src="Media/demo-tracing.gif" width="260" alt="Tracing the skyline: the cyan line follows the roof, with the sun's paths drawn on the sky">
+<img src="Media/demo-outdoor.gif" width="260" alt="A full survey outdoors: sighting the sun inside the magenta ring, tracing the skyline, and the result of 94.4 percent">
 
-*Tracing the skyline from a window in Horsens. Cyan is the trace. White is today's sun path, blue is December's, with a tick at every hour.*
+*A full outdoor survey in Horsens, sped up: the magenta ring sits on the sun after sighting it, the cyan line traces the rooftops and trees, and the result is 94.4 % of the year's clear-sky sunlight.*
 
 **XRD course project, VIA University College Horsens, autumn 2026.** Individual project by Patrik Klimko.
 
@@ -48,11 +48,12 @@ flowchart LR
 | Can the phone measure an angle? | Elevation to marks at known heights, 1 to 8 m away | ARKit reads a constant 0.31° low; after correction, worst error **0.04°** |
 | Is the sun maths right? | 39 checks against almanac values and first principles | **39 / 39 pass** |
 | How good is the sun sighting? | 17 repeated sightings in 6 sessions | Spread **±0.3°** |
-| How good is the compass? | Compass read at the moment of each sun sighting | Error **−16° to +46°**, while iOS claimed ±11° |
+| How good is the compass? | Compass read at the moment of each sun sighting | At windows **+34° to +47°** on average; in the open **−11° to +4°**. iOS claimed ±11° throughout |
 | Is the AR overlay in the right place? | Hour ticks and path heights in screenshots against the astronomy | Within the accuracy of reading a screenshot, about 0.5° |
-| Same spot, five surveys: same answer? | *Outdoor surveys, Monday 16 Nov* | *pending* |
+| Same spot, surveyed twice: same answer? | 7 outdoor surveys at 5 spots, 17 Nov | Open ground: **94.4 % and 94.7 %**. Next to a wall 2 m away: 85.7 % and 88.2 % |
+| Does the saved result reproduce? | Python port recomputes each saved skyline | **7 / 7** match to 0.01 % |
 
-Full detail is in the blog posts. Raw calibration data is in [`Data/`](Data/).
+Full detail is in the blog posts. All raw survey and calibration data is in [`Data/`](Data/), and [`Analysis/validate.py`](Analysis/validate.py) reproduces every number in post 6.
 
 ## Using the app
 
@@ -86,7 +87,7 @@ The architecture follows one observation from week one: **elevation is free, azi
 | [`AngleReadout.cs`](Assets/Scripts/AngleReadout.cs) | The HUD and touch handling, which wires the rest together |
 | [`LocationProvider.cs`](Assets/Scripts/LocationProvider.cs) | GPS and compass |
 
-**Verification:** *Horizon Survey → Run Solar Self-Check* in the Unity menu runs [`Editor/SolarSelfCheck.cs`](Assets/Editor/SolarSelfCheck.cs) (39 checks). NUnit versions of the same tests are in [`Assets/Tests~`](Assets/Tests~/), not compiled by default; see the README there.
+**Verification:** [`Analysis/validate.py`](Analysis/validate.py) recomputes every saved survey in Python and draws the charts in post 6. *Horizon Survey → Run Solar Self-Check* in the Unity menu runs [`Editor/SolarSelfCheck.cs`](Assets/Editor/SolarSelfCheck.cs) (39 checks). NUnit versions of the same tests are in [`Assets/Tests~`](Assets/Tests~/), not compiled by default; see the README there.
 
 ## Building
 
@@ -110,8 +111,8 @@ The architecture follows one observation from week one: **elevation is free, azi
 | 3 | [Finding north](BlogPosts/03-finding-north.md): compass against sun sighting |
 | 4 | [Tracing the skyline](BlogPosts/04-tracing-the-skyline.md): manual tracing, and three attempts to get it right |
 | 5 | [The sun on the real sky](BlogPosts/05-the-sun-on-the-real-sky.md): the AR overlay and the results screen |
-| 6 | Validation: *coming* |
-| 7 | Reflection: *coming* |
+| 6 | [Does it give the same answer twice?](BlogPosts/06-validation.md): repeat surveys, the compass outdoors, and what a wrong north costs |
+| 7 | [Looking back](BlogPosts/07-reflection.md): what surprised me, what I'd do differently, what's next |
 
 ## Progress
 
@@ -122,7 +123,7 @@ The architecture follows one observation from week one: **elevation is free, azi
 | 3 | Heading: compass baseline and sun-sighting calibration | Done |
 | 4 | Skyline capture | Done, by manual tracing instead of automatic segmentation |
 | 5 | Sun path overlay and results screen | Done |
-| 6 | Validation | Field surveys 16 Nov |
+| 6 | Validation | Done: field surveys 17 Nov |
 | 7 | Write-up | In progress |
 
 ## References

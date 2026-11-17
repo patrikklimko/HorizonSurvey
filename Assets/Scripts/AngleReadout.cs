@@ -49,6 +49,8 @@ public class AngleReadout : MonoBehaviour
     enum Pressed { None, Trace, Other }
     Pressed pressed = Pressed.None;
     float clearArmedUntil = -1f;
+    float partialArmedUntil = -1f;
+    float nextSunTapAt;
 
     HorizonProfile previewProfile = new HorizonProfile();
     float nextPreviewAt;
@@ -141,13 +143,25 @@ public class AngleReadout : MonoBehaviour
         if (compassButton.Contains(p))
             calibrator.CalibrateFromCompass(arCamera, location);
         else if (sunButton.Contains(p))
-            calibrator.CalibrateFromSun(arCamera, location);
+        {
+            // The log from 16 Nov shows bursts of five taps a second while the phone was
+            // swinging: a thumb resting on the button. One sighting per second at most.
+            if (Time.unscaledTime >= nextSunTapAt)
+            {
+                calibrator.CalibrateFromSun(arCamera, location);
+                nextSunTapAt = Time.unscaledTime + 1f;
+            }
+        }
         else if (resetHeadingButton.Contains(p))
             calibrator.Reset();
         else if (saveButton.Contains(p))
         {
-            if (recorder.ComputeAndSave(capture, calibrator, location))
+            bool allowPartial = Time.unscaledTime < partialArmedUntil;
+            partialArmedUntil = -1f;
+            if (recorder.ComputeAndSave(capture, calibrator, location, allowPartial))
                 results.Show(recorder.LastRecord);
+            else if (recorder.CanSaveAsPartial)
+                partialArmedUntil = Time.unscaledTime + 4f;
         }
         else if (overlayChip.Contains(p))
             overlay.Visible = !overlay.Visible;
@@ -243,7 +257,9 @@ public class AngleReadout : MonoBehaviour
         DrawButton(clearButton,
             Time.unscaledTime < clearArmedUntil ? "Tap again\nto clear" : "Clear\ntrace",
             Time.unscaledTime < clearArmedUntil, buttonStyle);
-        DrawButton(saveButton, "Save +\nresult", false, buttonStyle);
+        DrawButton(saveButton,
+            Time.unscaledTime < partialArmedUntil ? "Tap again:\nsave partial" : "Save +\nresult",
+            Time.unscaledTime < partialArmedUntil, buttonStyle);
     }
 
     void DrawReadout()

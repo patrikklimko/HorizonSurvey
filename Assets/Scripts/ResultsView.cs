@@ -33,6 +33,7 @@ public class ResultsView
     static readonly Color32 HorizonGuessed = new Color32(85, 80, 74, 255);
     static readonly Color32 SunLit = new Color32(255, 200, 60, 255);
     static readonly Color32 SunShaded = new Color32(105, 115, 140, 255);
+    static readonly Color32 SunUnknown = new Color32(70, 74, 84, 255);
 
     SurveyRecord record;
     Texture2D chart;
@@ -99,6 +100,7 @@ public class ResultsView
             float h = (float)horizon.ElevationAt(az);
             int top = Mathf.Clamp(Y(h), 0, TexH - 1);
             bool traced = record.binTraced != null && record.binTraced[bin];
+            if (record.partial && !traced) continue;   // nothing inferred on a partial survey
             Color32 c = traced ? HorizonTraced : HorizonGuessed;
             for (int y = 0; y <= top; y++)
             {
@@ -122,6 +124,11 @@ public class ResultsView
                 float az = (float)sun.AzimuthDeg, el = (float)sun.ElevationDeg;
                 if (az < azFrom || az > azTo) continue;
 
+                if (record.partial && !record.binTraced[HorizonProfile.BinOf(az)])
+                {
+                    Dot(px, X(az), Y(el), 1, SunUnknown);
+                    continue;
+                }
                 bool lit = el > horizon.ElevationAt(az);
                 Dot(px, X(az), Y(el), lit ? 3 : 2, lit ? SunLit : SunShaded);
             }
@@ -172,12 +179,23 @@ public class ResultsView
         float x = area.x + pad, w = area.width - pad * 2f;
         float y = area.y + pad * 0.6f;
 
-        // 1. the number
-        GUI.Label(new Rect(x, y, w, big.fontSize * 1.3f),
-            $"{record.annualAccessPct:F1} %", big);
-        y += big.fontSize * 1.25f;
-        GUI.Label(new Rect(x, y, w, body.fontSize * 2.6f),
-            "of the year's clear-sky sunlight reaches this spot\n(flat panel, measured skyline)", body);
+        // 1. the number - or, for a partial survey, an honest refusal to give one
+        if (record.partial)
+        {
+            GUI.Label(new Rect(x, y, w, big.fontSize * 1.3f), "Partial survey", big);
+            y += big.fontSize * 1.25f;
+            GUI.Label(new Rect(x, y, w, body.fontSize * 2.6f),
+                $"Only {record.sunArcCoverage:P0} of the sun's arc was traced - too little for a\nyearly figure. The skyline is saved for comparison.", body);
+        }
+        else
+        {
+            GUI.Label(new Rect(x, y, w, big.fontSize * 1.3f),
+                $"{record.annualAccessPct:F1} %", big);
+            y += big.fontSize * 1.25f;
+            GUI.Label(new Rect(x, y, w, body.fontSize * 2.6f),
+                "of the year's clear-sky sunlight reaches this spot\n(flat panel, measured skyline)", body);
+        }
+        if (record.partial) y += big.fontSize * 1.25f;
         y += body.fontSize * 2.8f;
 
         string heading = record.headingReference == "Sun"
@@ -211,10 +229,18 @@ public class ResultsView
         }
         y = ly + label.fontSize * 1.5f;
         GUI.Label(new Rect(x, y, w, small.fontSize * 1.4f),
-            "sun on the 21st of each month:  yellow = sunlit,  grey = shaded", small);
+            record.partial
+                ? "sun on the 21st of each month:  yellow = sunlit,  grey = shaded,  faint = not traced"
+                : "sun on the 21st of each month:  yellow = sunlit,  grey = shaded", small);
         y += small.fontSize * 2.0f;
 
-        // 3. monthly bars
+        // 3. monthly bars - not for a partial survey, there are no monthly figures
+        if (record.partial)
+        {
+            GUI.Label(new Rect(x, area.yMax - pad - small.fontSize * 1.3f, w, small.fontSize * 1.4f),
+                $"survey-{record.id}.json   ·   tap here to close", small);
+            return;
+        }
         float barsBottom = area.yMax - pad - small.fontSize * 3.2f;
         float barsTop = y + label.fontSize * 1.4f;
         float barsH = Mathf.Max(40f, barsBottom - barsTop);
