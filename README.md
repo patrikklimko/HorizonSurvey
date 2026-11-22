@@ -10,6 +10,8 @@ The professional instrument for this, a Solmetric SunEye 210, costs about $2,195
 
 *A full outdoor survey in Horsens, sped up: the magenta ring sits on the sun after sighting it, the cyan line traces the rooftops and trees, and the result is 94.4 % of the year's clear-sky sunlight.*
 
+**▶ [Watch the demo video on Google Drive](https://drive.google.com/file/d/1RN8s-MJvubn5oOhf1GfEDWO33BwPCaku/view?usp=sharing)**
+
 **XRD course project, VIA University College Horsens, autumn 2026.** Individual project by Patrik Klimko.
 
 ---
